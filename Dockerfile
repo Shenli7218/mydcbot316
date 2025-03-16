@@ -17,7 +17,7 @@ RUN rustup update
 RUN cargo build --release
 
 # 第二階段：運行階段
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim  # 更新為 bookworm-slim 或使用 ubuntu
 
 # 安裝所需的依賴庫：SQLite 和 OpenSSL
 RUN apt-get update && \
