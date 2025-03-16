@@ -19,9 +19,9 @@ RUN cargo build --release
 # 第二階段：運行階段
 FROM debian:bookworm-slim
 
-# 安裝所需的依賴庫：SQLite 和 OpenSSL
+# 安裝所需的依賴庫：SQLite、OpenSSL 和 sqlite3
 RUN apt-get update && \
-    apt-get install -y libsqlite3-0 libssl-dev ca-certificates && \
+    apt-get install -y libsqlite3-0 libssl-dev ca-certificates sqlite3 && \
     rm -rf /var/lib/apt/lists/*
 
 # 創建資料夾 /t 並設置權限，這對資料庫至關重要
