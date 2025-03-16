@@ -247,7 +247,9 @@ async fn handle_setconfig(
 #[tokio::main]
 async fn main() {
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT; // Example intents
-    let pool = SqlitePool::connect("sqlite://bot.db").await.unwrap();
+
+    // 使用絕對路徑來設置 SQLite 連接
+    let pool = SqlitePool::connect("sqlite:////data/bot.db").await.unwrap(); // 使用絕對路徑
     let (tx, rx) = mpsc::channel(100);
     let queue = Arc::new(QueueHolder { tx, rx: Mutex::new(rx) });
 
