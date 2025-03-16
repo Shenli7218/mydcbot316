@@ -153,7 +153,7 @@ async fn save_registration(
     .bind(form_data.0)
     .bind(form_data.1)
     .execute(pool)
-    .await?;
+    .await?; 
     Ok(())
 }
 
@@ -164,8 +164,8 @@ async fn assign_role_for_queued(
     advanced_role: RoleId,
 ) -> Result<(), serenity::Error> {
     let guild = GuildId(qmsg.guild_id);
-    let member = guild.member(ctx, qmsg.author_id).await?;
-    member.add_role(ctx, advanced_role).await?;
+    let mut member = guild.member(ctx, qmsg.author_id).await?; // 必須為 mutable
+    member.add_role(ctx, advanced_role).await?; 
     Ok(())
 }
 
