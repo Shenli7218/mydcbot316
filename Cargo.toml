@@ -1,0 +1,10 @@
+[package]
+name = "mydcbot316"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serenity = { version = "0.11", features = ["client", "standard_framework", "rustls_backend", "gateway"] }
+tokio = { version = "1", features = ["full"] }
+sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls", "sqlite" ] }
+async-trait = "0.1"
