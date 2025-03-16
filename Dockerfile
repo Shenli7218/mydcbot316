@@ -4,12 +4,14 @@ FROM rust:1.81 as builder
 # 設定工作目錄
 WORKDIR /usr/src/app
 
+# 安裝依賴（比如 pkg-config，這有時候需要用來編譯依賴）
+RUN apt-get update && apt-get install -y libssl-dev pkg-config libsqlite3-dev
+
 # 複製所有專案檔案
 COPY . .
 
-# 設定環境變數來優化編譯
-ENV CARGO_REGISTRY_INDEX="https://github.com/rust-lang/crates.io-index"
-ENV CARGO_HOME=/usr/src/cargo
+# 更新 Rust 工具鏈
+RUN rustup update
 
 # 生成 Cargo.lock 檔案，這會在初次編譯時自動生成
 RUN cargo build --release
