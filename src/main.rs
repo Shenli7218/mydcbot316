@@ -164,7 +164,7 @@ async fn assign_role_for_queued(
     advanced_role: RoleId,
 ) -> Result<(), serenity::Error> {
     let guild = GuildId(qmsg.guild_id);
-    let member = guild.member(ctx, qmsg.author_id.into()).await?;
+    let member = guild.member(ctx, qmsg.author_id).await?;
     member.add_role(ctx, advanced_role).await?;
     Ok(())
 }
@@ -207,7 +207,7 @@ async fn handle_setconfig(
     guild_id: u64,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let member = msg.guild_id.unwrap().member(ctx, msg.author.id).await?;
-    if !member.permissions(ctx).await?.administrator() {
+    if !member.permissions(ctx)?.administrator() {
         let _ = msg.reply(ctx, "你沒有權限執行此命令。").await?;
         return Ok(());
     }
@@ -219,18 +219,20 @@ async fn handle_setconfig(
         ).await?;
         return Ok(());
     }
-    let reg_channel = parts[1].parse::<u64>()?;
+
+    let registration_channel = parts[1].parse::<u64>()?;
     let manual_channel = parts[2].parse::<u64>()?;
     let admin_channel = parts[3].parse::<u64>()?;
     let admin_role = parts[4].parse::<u64>()?;
     let advanced_role = parts[5].parse::<u64>()?;
 
+    // 儲存設定至資料庫
     sqlx::query(
-        "INSERT OR REPLACE INTO guild_configs (guild_id, registration_channel, manual_channel, admin_channel, admin_role, advanced_role)
+        "REPLACE INTO guild_configs (guild_id, registration_channel, manual_channel, admin_channel, admin_role, advanced_role)
          VALUES (?, ?, ?, ?, ?, ?)"
     )
     .bind(guild_id as i64)
-    .bind(reg_channel as i64)
+    .bind(registration_channel as i64)
     .bind(manual_channel as i64)
     .bind(admin_channel as i64)
     .bind(admin_role as i64)
@@ -238,63 +240,24 @@ async fn handle_setconfig(
     .execute(pool)
     .await?;
 
-    let _ = msg.reply(ctx, "配置已更新。").await?;
+    let _ = msg.reply(ctx, "成功設置配置信息！").await?;
     Ok(())
 }
 
 #[tokio::main]
 async fn main() {
-    // 建立 sqlx 的 SQLite 連線池（可設定最大連線數以分散高併發存取）
-    let pool = SqlitePool::connect("sqlite:bot_database.db")
-        .await
-        .expect("無法連線到資料庫");
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT; // Example intents
+    let pool = SqlitePool::connect("sqlite://bot.db").await.unwrap();
+    let (tx, rx) = mpsc::channel(100);
+    let queue = Arc::new(QueueHolder { tx, rx: Mutex::new(rx) });
 
-    // 建立必要的資料表
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS registrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            guild_id INTEGER NOT NULL,
-            name TEXT NOT NULL,
-            age TEXT NOT NULL
-        )"
-    )
-    .execute(&pool)
-    .await
-    .expect("建立 registrations 表失敗");
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS guild_configs (
-            guild_id INTEGER PRIMARY KEY,
-            registration_channel INTEGER NOT NULL,
-            manual_channel INTEGER NOT NULL,
-            admin_channel INTEGER NOT NULL,
-            admin_role INTEGER NOT NULL,
-            advanced_role INTEGER NOT NULL
-        )"
-    )
-    .execute(&pool)
-    .await
-    .expect("建立 guild_configs 表失敗");
-
-    // 建立 mpsc 佇列（發送端與接收端）
-    let (tx, rx) = mpsc::channel::<QueuedMessage>(1000);
-    let queue = Arc::new(QueueHolder {
-        tx,
-        rx: Mutex::new(rx),
-    });
-
-    // 建立 Handler，並將 pool 與 queue 注入
-    let handler = Handler {
-        pool: pool.clone(),
-        queue: queue.clone(),
-    };
-
-    let mut client = Client::builder("YOUR_BOT_TOKEN_HERE")
+    let handler = Handler { pool, queue };
+    let mut client = Client::builder("YOUR_BOT_TOKEN_HERE", intents)
         .event_handler(handler)
         .await
-        .expect("建立客戶端失敗");
+        .expect("創建客戶端失敗");
 
-    if let Err(why) = client.start().await {
-        println!("客戶端錯誤: {:?}", why);
+    if let Err(e) = client.start().await {
+        println!("啟動失敗: {:?}", e);
     }
 }
