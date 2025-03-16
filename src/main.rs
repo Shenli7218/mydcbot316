@@ -1,4 +1,5 @@
 use serenity::async_trait;
+use serenity::framework::standard::StandardFramework;
 use serenity::model::prelude::*;
 use serenity::prelude::*;
 use sqlx::{SqlitePool, Row};
@@ -78,7 +79,6 @@ struct Handler {
 impl Handler {
     /// 處理佇列內所有待處理訊息（利用當前取得的 Context）
     async fn process_queue(&self, ctx: &Context) {
-        // 鎖定接收端並排乾所有訊息
         let mut rx = self.queue.rx.lock().await;
         while let Some(qmsg) = rx.try_recv().ok() {
             process_message_worker(ctx, &self.pool, qmsg).await;
@@ -109,7 +109,7 @@ impl EventHandler for Handler {
             println!("推入佇列失敗: {:?}", e);
         }
 
-        // 立刻嘗試處理佇列內所有訊息
+        // 立即嘗試處理佇列內所有訊息
         self.process_queue(&ctx).await;
     }
 }
@@ -157,15 +157,15 @@ async fn save_registration(
     Ok(())
 }
 
-/// 為 QueuedMessage 分配進階身份組（與原有邏輯相同）
+/// 為 QueuedMessage 分配進階身份組
 async fn assign_role_for_queued(
     ctx: &Context,
     qmsg: &QueuedMessage,
     advanced_role: RoleId,
 ) -> Result<(), serenity::Error> {
     let guild = GuildId(qmsg.guild_id);
-    let mut member = guild.member(ctx, qmsg.author_id).await?; // 必須為 mutable
-    member.add_role(ctx, advanced_role).await?; 
+    let mut member = guild.member(ctx, qmsg.author_id).await?;
+    member.add_role(ctx, advanced_role).await?;
     Ok(())
 }
 
@@ -226,7 +226,6 @@ async fn handle_setconfig(
     let admin_role = parts[4].parse::<u64>()?;
     let advanced_role = parts[5].parse::<u64>()?;
 
-    // 儲存設定至資料庫
     sqlx::query(
         "REPLACE INTO guild_configs (guild_id, registration_channel, manual_channel, admin_channel, admin_role, advanced_role)
          VALUES (?, ?, ?, ?, ?, ?)"
@@ -246,15 +245,20 @@ async fn handle_setconfig(
 
 #[tokio::main]
 async fn main() {
-    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT; // Example intents
+    let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::MESSAGE_CONTENT;
 
     // 使用絕對路徑來設置 SQLite 連接
-    let pool = SqlitePool::connect("sqlite:////t/bot.db").await.unwrap(); // 使用絕對路徑
+    let pool = SqlitePool::connect("sqlite:////t/bot.db").await.unwrap();
     let (tx, rx) = mpsc::channel(100);
     let queue = Arc::new(QueueHolder { tx, rx: Mutex::new(rx) });
 
     let handler = Handler { pool, queue };
+
+    // 初始化 StandardFramework 並設定指令前綴為 "!"
+    let framework = StandardFramework::new().configure(|c| c.prefix("!"));
+
     let mut client = Client::builder("YOUR_BOT_TOKEN_HERE", intents)
+        .framework(framework)
         .event_handler(handler)
         .await
         .expect("創建客戶端失敗");
