@@ -40,4 +40,4 @@ WORKDIR /t
 EXPOSE 8080
 
 # 初始化資料庫結構（如果資料庫文件存在，會跳過創建）
-CMD ["sh", "-c", "sqlite3 /t/bot.db 'CREATE TABLE IF NOT EXISTS guild_configs (guild_id INTEGER PRIMARY KEY, registration_channel INTEGER, manual_channel INTEGER, admin_channel INTEGER, admin_role INTEGER, advanced_role INTEGER); CREATE TABLE IF NOT EXISTS registrations (guild_id INTEGER, name TEXT, age TEXT, PRIMARY KEY(guild_id, name)); mydcbot316"]
+CMD sh -c "sqlite3 /t/bot.db 'CREATE TABLE IF NOT EXISTS guild_configs (guild_id INTEGER PRIMARY KEY, registration_channel INTEGER, manual_channel INTEGER, admin_channel INTEGER, admin_role INTEGER, advanced_role INTEGER);' && sqlite3 /t/bot.db 'CREATE TABLE IF NOT EXISTS registrations (guild_id INTEGER, name TEXT, age TEXT, PRIMARY KEY(guild_id, name));' && mydcbot316"
