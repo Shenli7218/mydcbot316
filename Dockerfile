@@ -1,5 +1,5 @@
 # 第一階段：建置階段
-FROM rust:1.70 as builder
+FROM rust:1.81 as builder
 WORKDIR /usr/src/app
 
 # 只複製 Cargo.toml，並在構建過程中生成 Cargo.lock
