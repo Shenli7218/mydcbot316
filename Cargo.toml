@@ -8,3 +8,7 @@ serenity = { version = "0.11", features = ["client", "standard_framework", "rust
 tokio = { version = "1", features = ["full"] }
 sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls", "sqlite" ] }
 async-trait = "0.1"
+
+[[bin]]
+name = "mydcbot316"
+path = "src/main.rs"
