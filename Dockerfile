@@ -2,14 +2,10 @@
 FROM rust:1.81 as builder
 WORKDIR /usr/src/app
 
-# 只複製 Cargo.toml，並在構建過程中生成 Cargo.lock
-COPY Cargo.toml ./
+# 先複製所有專案檔案
+COPY . .
 
 # 生成 Cargo.lock 檔案，這會在初次編譯時自動生成
-RUN cargo build --release
-
-# 複製完整專案並重新編譯
-COPY . .
 RUN cargo build --release
 
 # 第二階段：運行階段
@@ -25,4 +21,3 @@ WORKDIR /data
 
 # 設定運行指令
 CMD ["mydcbot316"]
-
